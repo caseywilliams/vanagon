@@ -1,6 +1,7 @@
 require 'vanagon/project'
 require 'vanagon/driver'
 require 'vanagon/errors'
+require 'fakefs/spec_helpers'
 
 describe 'Vanagon::Project' do
   let(:component) { double(Vanagon::Component) }
@@ -412,6 +413,37 @@ describe 'Vanagon::Project' do
       @proj.build_manifest_json(true)
     end
   end
+
+  describe '#save_manifest_json' do
+    include FakeFS::SpecHelpers
+    let(:platform_name) { 'el-7-x86_64' }
+    let(:platform) { Vanagon::Platform.new(platform_name) }
+    before(:each) do
+      class Vanagon
+        class Project
+          BUILD_TIME = '2017-07-10T13:34:25-07:00'
+          VANAGON_VERSION = '0.0.0-rspec'
+        end
+      end
+
+      @proj = Vanagon::Project.new('test-project', platform)
+    end
+
+    it 'should generate a file with the expected build metadata' do
+      comp1 = Vanagon::Component.new('test-component1', {}, {})
+      comp1.version = '1.0.0'
+      @proj.components << comp1
+      @proj.version = '123abcde'
+      FakeFS do
+        @proj.save_manifest_json(platform)
+
+        ### STILL NEED TO TEST CONTENT
+        expect(File).to exist('ext/build_metadata.json')
+        expect(File).to exist("ext/build_metadata.test-project.#{platform_name}.json")
+      end
+    end
+  end
+
 
   describe '#publish_yaml_settings' do
     let(:platform_name) { 'aix-7.2-ppc' }
